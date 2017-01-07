@@ -48,7 +48,7 @@ const noteToFreq = (note, octave) => {
   const notes = "C C# D D# E F F# G G# A A# B".split(" ")
   const n = (typeof note === "string") ? notes.indexOf(note) : n
   const f = (110*2**octave)*2**((n+3)/12)
-  console.log(note,f)
+  console.log(note,octave,f)
   return f
 }
 
