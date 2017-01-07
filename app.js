@@ -44,10 +44,12 @@ const typeColors = {
 }
 
 const noteToFreq = (note, octave) => {
+  
   const notes = "A A# B C C# D D# E F F# G G#".split(" ")
   const n = (typeof note === "string") ? notes.indexOf(note) : n
-  const f0 = (220*2**octave)*2**.25
-  return f0*2**((n + 1)/12)
+  const f = (110*2**octave)*2**(n/12)
+  console.log(note,f)
+  return f
 }
 
 const hexColor = (c) => {
