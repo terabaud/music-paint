@@ -641,8 +641,8 @@ WebMidi.enable(function(err) {
       const f = noteToFreq(e.note.name, e.note.octave)
       const y = freqToY(f)
       if (midiNoises[noteName]) {
-        midiNoises[noteName].coords[1][0] = cursorX
-        music.push(midiNoises[noteName])
+        //midiNoises[noteName].coords[1][0] = cursorX
+        //music.push(midiNoises[noteName])
         midiNoises[noteName].mute()
         delete midiNoises[noteName]
         scrollToCursor()
