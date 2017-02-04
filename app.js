@@ -2,9 +2,10 @@ const isDebug = /debug/.test(window.location.href)
 const w3 = "http://www.w3.org/"
 const svgNS = w3 + "2000/svg"
 const xlinkNS = w3 + "1999/xlink"
+const notes = "C C# D D# E F F# G G# A A# B".split(" ")
 let w, h
 let scrollX = 0, scrollY = 0, cursorX = 0
-const borders = { l: 0, r: 1000 }
+const borders = { l: 0, r: 250 }
 const borderExtend = 250
 let moveMode = null
 let playing = false
@@ -44,11 +45,8 @@ const typeColors = {
 }
 
 const noteToFreq = (note, octave) => {
-  
-  const notes = "C C# D D# E F F# G G# A A# B".split(" ")
-  const n = (typeof note === "string") ? notes.indexOf(note) : n
+  const n = (typeof note === "string") ? notes.indexOf(note.replace(/_/,'')) : n
   const f = (110*2**octave)*2**((n+3)/12)
-  console.log(note,octave,f)
   return f
 }
 
@@ -634,7 +632,7 @@ WebMidi.enable(function(err) {
       const y = freqToY(f)
       if (!midiNoises[noteName]) {
         midiNoises[noteName] = new Noise({relX: cursorX, relY: y}, null, currentType)
-        midiNoises[noteName].add({relX: cursorX, relY: y}, null)
+        midiNoises[noteName].add({relX: cursorX + 5, relY: y}, null)
         scrollToCursor()
       }
     })
@@ -643,8 +641,8 @@ WebMidi.enable(function(err) {
       const f = noteToFreq(e.note.name, e.note.octave)
       const y = freqToY(f)
       if (midiNoises[noteName]) {
-        //midiNoises[noteName].coords[1][0] = cursorX
-        //music.push(midiNoises[noteName])
+        midiNoises[noteName].coords[1][0] = cursorX
+        music.push(midiNoises[noteName])
         midiNoises[noteName].mute()
         delete midiNoises[noteName]
         scrollToCursor()
@@ -653,26 +651,66 @@ WebMidi.enable(function(err) {
   })  
 })
 
-const keyboardScores = () => {
-  const scores = {
-    "de-DE": "<aysxcfvgbhnmk,l.-äq2w3er5t6z7ui9o0pü´+"
-    
+const keyboardMappings = () => {
+  const lang = navigator.language.slice(0,2)
+  const mappings = {
+    "de": "ysxdcvgbhnjmq2w3er5t6z7u",
+    "en": "zsxdcvgbhnjmq2w3er5t6y7u",
+    "fr": "wsxdcvgbhnj,a2z3er5t6y7u",
   }
+  return mappings[lang]||mappings.en
 }
 
 window.addEventListener("keydown", (e) => {
-  
-  
-  
+  const mappings = keyboardMappings()
+  console.log(e.key)
+  const i = mappings.indexOf(e.key)
+  if (i > -1) {
+    const note = notes[i % 12]
+    const oct  = 1 + (i / 12)|0
+    const noteName = "_" + note + oct
+
+    const f = noteToFreq(note, oct)
+    const y = freqToY(f)
+    if (!midiNoises[noteName]) {
+      midiNoises[noteName] = new Noise({relX: cursorX, relY: y}, null, currentType)
+      midiNoises[noteName].add({relX: cursorX + 5, relY: y}, null)
+      scrollToCursor()
+    }
+  }
 })
 
 window.addEventListener("keyup", (e) => {
-  
+  const mappings = keyboardMappings()
+  const i = mappings.indexOf(e.key)
+  if (i > -1) {
+    const note = notes[i % 12]
+    const oct  = 1 + (i / 12)|0
+    const noteName = "_" + note + oct
+    if (midiNoises[noteName]) {
+      midiNoises[noteName].coords[1][0] = cursorX
+      music.push(midiNoises[noteName])
+      midiNoises[noteName].mute()
+      delete midiNoises[noteName]
+      scrollToCursor()
+    }
+  }  
 })
 
 ~function loop() {
-  if (playing || Object.keys(midiNoises).length > 0) {
+  const midiKeys = Object.keys(midiNoises)
+  if (playing || midiKeys.length > 0) {
     cursorX+=2
+    if (midiKeys.length > 0 && cursorX > borders.r) {
+      borders.r += borderExtend
+    }
+    midiKeys.forEach(k => {
+      let n = midiNoises[k]
+      if (n.coords.length == 2) {
+        n.coords[1][0] = cursorX
+        n.render()
+      }
+    })
     scrollToCursor()
     setViewBox()
   }
@@ -680,13 +718,12 @@ window.addEventListener("keyup", (e) => {
     if (cursorX > borders.r && (!userIsJamming())) setCursor(borders.l)
     music.forEach(beep => beep.playAtX(cursorX))
   }
-  
   if (touchNoises.length > 0 || mouseNoise) {
     if (!playing) scrollX+=3
     if (mouseNoise) {
       mouseNoise.add(mouseNoise.lastX, mouseNoise.lastY)
     }
-    touchNoises.forEach(t => t.noise.add(t.noise.lastX,t.noise.lastY))
+    touchNoises.forEach(n => n.noise.add(n.noise.lastX,n.noise.lastY))
     setViewBox()
   }
   requestAnimationFrame(loop)
